@@ -17,9 +17,23 @@ task.post('/task',async(req,res)=>{
   })
   
   task.patch('/task/:id', async(req,res)=>{
+    const updates = Object.keys(req.body)
+    const allowUpdate = ['description']
+    const isvalid = updates.every((update)=>allowUpdate.includes(update))
+
+    if(!isvalid){
+        res.status(404).send()
+    }
   
       try{
-          const task = await Task.findByIdAndUpdate(req.params.id, req.body,{new:true, runValidators:true})
+
+        
+          const task = await Task.findById(req.params.id)
+            updates.forEach((update)=>{
+                task[update] = req.body[update]
+            })  
+            await task.save()
+
           if(!task){
               return res.status(404).send()
           }
