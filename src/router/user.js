@@ -22,13 +22,39 @@ user.post('/user/login', async(req,res)=>{
         const user = await User.findByCred(req.body.email, req.body.password)
         const token = await user.generate()
         res.send({user, token})
-        // res.send(user)
+     
     }catch (e){
         res.status(400),send()
     }
 })
 
-user.patch('/user/:id', async(req,res)=>{        // Update by id
+user.post('/user/logout', auth, async(req,res)=>{
+
+    try{
+        req.user.tokens = req.user.tokens.filter((token)=>{
+            return token.token !== req.token
+        })
+
+        await req.user.save()
+        res.sned()
+    }catch(e){
+        res.status(500).send()
+    }
+
+})
+
+user.post('/user/logoutall', auth, async(req, res)=>{
+    try{
+        req.user.tokens=[]
+        await req.user.save()
+        res.send()
+    }catch (e){
+        res.status(500).send(e)
+    }
+    
+})
+
+user.patch('/user/me', auth ,  async(req,res)=>{        // Update by id
 
     const updates = Object.keys(req.body)
     const allowUpdate = ['name','password']
@@ -39,66 +65,54 @@ user.patch('/user/:id', async(req,res)=>{        // Update by id
     }
 
     try{
-        const user = await Users.findById(req.params.id)
+        
 
          updates.forEach((update)=>{
-            user[update]=req.body[update]
-
+            req.user[update]=req.body[update]
          })
 
-         await user.save()
+         await req.user.save()
+        res.send(req.user)
 
-
-        // const user = await Users.findByIdAndUpdate(req.params.id, req.body, {new:true, runValidators:true})
-        if(!user){
-            return res.status(404).send()
-        }
-        res.send(user)
     }catch(e){
         res.status(400).send(e)
     }
 
 })
 
-user.get('/user', auth , async (req,res)=>{          // find from database
+user.get('/user/me', auth , async (req,res)=>{          // find from database
     
-    try{    
-        const user = await Users.find({})
-        res.status(200).send(user)
-    }catch(e){
-        res.status(404).send(e)
-    }
+    res.send(req.user)
 })
 
 
-
-
-
-
-user.get('/user/:id',async (req,res)=>{          // find by id from database
+// user.get('/user/:id',async (req,res)=>{          // find by id from database
     
-    const _id = req.params.id
+//     const _id = req.params.id
    
+//     try{
+//         const user = await Users.findById(_id)
+//         if(!user){
+//             return res.status(404).send()
+//         }
+//         res.send(user)
+//     }catch(e){
+//         res.status(400).send(e)
+//     }
+
+// })
+
+user.delete('/user/me', auth,  async(req,res)=>{                           // Delete by id
+
     try{
-        const user = await Users.findById(_id)
-        if(!user){
-            return res.status(404).send()
-        }
-        res.send(user)
-    }catch(e){
-        res.status(400).send(e)
-    }
+        //  await Users.findByIdAndDelete(req.user._id)       
+        // if(!user){
+        //     req.status(404).send
+        // }
 
-})
+        await req.user.remove()
+        res.send(req.user)
 
-user.delete('/user/:id', async(req,res)=>{                           // Delete by id
-
-    try{
-        const user = await Users.findByIdAndDelete(req.params.id)       
-        if(!user){
-            req.status(404).send
-        }
-        res.send(user)
     }catch(e){
         res.status(400).send(e)
     }
