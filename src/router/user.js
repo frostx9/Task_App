@@ -2,6 +2,9 @@ const express = require('express')
 const User = require('../model/user')
 const Users = require('../model/user')
 const auth = require('../middle/auth')
+const multer = require('multer')
+const sharp = require('sharp')
+
 const user = new express.Router()
 
 user.post('/user',async(req,res)=>{              // Save on Database
@@ -15,6 +18,51 @@ user.post('/user',async(req,res)=>{              // Save on Database
         res.status(404).send(e)
    }
 })
+
+const upload = multer({
+    limits:{
+        fileSize:1000000
+    },
+    fileFilter(req, file, cb){
+        if(!file.originalname.endsWith('.pdf') && !file.originalname.match(/\.(jpg|jpeg)$/) && !file.originalname.match(/\.(doc|docx)$/) ){
+            return cb(new Error ('Un supported File'))
+        }
+        cb(undefined, true)
+    }
+    
+})
+
+user.post('/user/me/avatar', auth, upload.single('avatar'), async(req, res)=>{
+    const buffer = await sharp(req.file.buffer).resize({width:250, height:250}).png().toBuffer()
+    req.user.avatar=buffer
+    await req.user.save()
+    res.send('Upload Done')
+},(error, req, res, next)=>{
+    res.status(400).send({error: error.message })
+})
+
+user.delete('/user/me/avatar',auth,(req,res)=>{
+    req.user.avatar = undefined
+    req.user.save()
+    res.send()
+
+})
+
+user.get('/user/:id/avatar', async(req,res)=>{
+    try{
+        const user = await User.findById(req.params.id)
+        if(!user || !user.avatar){
+            throw new Error
+        }
+
+        res.set('Content-Type','image/png')
+        res.send(user.avatar)
+
+    }catch(e){
+        res.status(404).send()
+    }
+})
+
 
 user.post('/user/login', async(req,res)=>{
     try{
@@ -121,3 +169,4 @@ user.delete('/user/me', auth,  async(req,res)=>{                           // De
 
 
 module.exports = user
+
