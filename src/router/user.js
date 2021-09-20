@@ -4,7 +4,7 @@ const Users = require('../model/user')
 const auth = require('../middle/auth')
 const multer = require('multer')
 const sharp = require('sharp')
-
+const {sendWelcomeEmail,sendCancellEmail} = require('../emails/account')
 const user = new express.Router()
 
 user.post('/user',async(req,res)=>{              // Save on Database
@@ -12,6 +12,7 @@ user.post('/user',async(req,res)=>{              // Save on Database
     const user = new Users(req.body)
    try{
         await user.save()
+        sendWelcomeEmail(user.email, user.name)
         const token = await user.generate()
         res.status(200).send({user, token})
    }catch(e){
@@ -159,6 +160,7 @@ user.delete('/user/me', auth,  async(req,res)=>{                           // De
         // }
 
         await req.user.remove()
+        sendCancellEmail(req.user.email, req.user.name)
         res.send(req.user)
 
     }catch(e){
